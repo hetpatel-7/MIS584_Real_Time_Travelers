@@ -1,2 +1,6 @@
 venv/
 data/
+.vscode/
+node/
+data.db
+__pycache__/

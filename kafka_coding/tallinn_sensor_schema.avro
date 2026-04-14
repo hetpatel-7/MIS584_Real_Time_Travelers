@@ -1,0 +1,15 @@
+{
+	"namespace": "stock_schema.avro",
+	"type": "record",
+	"name": "Sensor",
+	"fields": [
+		{"name": "andurid_id", "type": "long"},
+		{"name": "name",  "type": "string"},
+		{"name": "ts", "type": "string"},
+		{"name": "pir", "type": "int"},
+		{"name": "in_count", "type": "int"},
+		{"name": "out_count", "type": "int"},
+		{"name": "humidity", "type": "float"},
+		{"name": "temp", "type": "float"}
+	]
+}
