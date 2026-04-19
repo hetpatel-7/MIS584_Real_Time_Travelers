@@ -4,3 +4,6 @@ data/
 node/
 data.db
 __pycache__/
+# Datasets — too large for git
+*.csv
+.claude/

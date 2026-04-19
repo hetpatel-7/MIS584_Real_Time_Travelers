@@ -43,7 +43,7 @@ async def start_publishers():
             interval_number=2,
             interval_unit="seconds",
             max_iterations="forever", # Set to run continuously!
-            enable_socket=True
+            enable_socket=False       # set True only when app.py socket server is running
         )
         publisher_task = asyncio.create_task(
             publisher.start()
@@ -58,10 +58,15 @@ async def start_publishers():
         group_id="forecast_acc",
         task_created = None,
         topic=TOPIC,
-        interval_number=2,
+        interval_number=60,           # run consumer for 60 minutes
         interval_unit="minutes"
     )
-    
-    await asyncio.gather(*[x.task_created for x in publishers])
+    subscriber_task = asyncio.create_task(subscriber.start())
+    subscriber.task_created = subscriber_task
+
+    await asyncio.gather(
+        *[x.task_created for x in publishers],
+        subscriber_task
+    )
 
 asyncio.run(start_publishers())

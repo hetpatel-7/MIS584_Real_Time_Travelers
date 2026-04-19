@@ -1,3 +1,4 @@
+import os
 import json
 import kafka
 from kafka import KafkaProducer
@@ -13,6 +14,10 @@ from datetime import datetime, timedelta
 from typing import Union, Literal
 import socketio
 from tl_sio_client import PublisherSIOClient
+
+# data.db lives in the project root (one level above kafka_coding/)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_PATH = os.path.join(_HERE, "..", "data.db")
 
 class TallinnGateSensorPublisher():
     """ A sensor that will publish data every X units of time.
@@ -63,7 +68,7 @@ class TallinnGateSensorPublisher():
     
     async def start(self):
         print(f"Starting '{self.alias}' (PROD)")
-        self.db_connection = sqlite3.connect("./data.db")
+        self.db_connection = sqlite3.connect(DEFAULT_DB_PATH)
         # From tijko (2024) https://stackoverflow.com/a/57806886
         with self.db_connection:
             self.db_connection.row_factory = sqlite3.Row
