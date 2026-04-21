@@ -25,8 +25,7 @@ cameras_considered = [
     "[0] Väike-Karja 12"
 ]
 
-SERVER_ADDRESS = "localhost:9092"
-TOPIC = "gate_data"
+from tl_utils.constants import SERVER_ADDRESS, TOPIC, SENSOR_START_DATE
 
 async def start_publishers():
     publishers = []
@@ -37,7 +36,7 @@ async def start_publishers():
             sensor_name = name,
             alias = name,
             socket_number = index,
-            start_date = datetime.fromisoformat("2023-01-09T15:00:00+02:00"),
+            start_date = SENSOR_START_DATE,
             task_created = None,
             topic=TOPIC,
             interval_number=2,
@@ -51,22 +50,21 @@ async def start_publishers():
         publisher.task_created = publisher_task
         publishers.append(publisher)
 
-    subscriber = TallinnGateSensorConsumer(
-        server_address=SERVER_ADDRESS,
-        alias="forecasting_cn",
-        objective="forecast_acc",
-        group_id="forecast_acc",
-        task_created = None,
-        topic=TOPIC,
-        interval_number=60,           # run consumer for 60 minutes
-        interval_unit="minutes"
-    )
-    subscriber_task = asyncio.create_task(subscriber.start())
-    subscriber.task_created = subscriber_task
+    #subscriber = TallinnGateSensorConsumer(
+    #    server_address=SERVER_ADDRESS,
+    #    alias="forecasting_cn",
+    #    objective="forecast_acc",
+    #    group_id="forecast_acc",
+    #    task_created = None,
+    #    topic=TOPIC,
+    #    interval_number=60,           # run consumer for 60 minutes
+    #    interval_unit="minutes"
+    #)
+    #subscriber_task = asyncio.create_task(subscriber.start())
+    #subscriber.task_created = subscriber_task
 
     await asyncio.gather(
-        *[x.task_created for x in publishers],
-        subscriber_task
+        *[x.task_created for x in publishers]
     )
 
 asyncio.run(start_publishers())

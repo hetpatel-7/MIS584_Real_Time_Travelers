@@ -1,6 +1,7 @@
 
 from enum import Enum
 import avro.schema
+from datetime import datetime
 
 class IntervalUnit_to_Multiplier(Enum):
     millis = 0.001
@@ -13,6 +14,11 @@ SCHEMA = avro.schema.parse(open(SCHEMA_PATH).read())
 SOCKET_SERVER_HOST = "127.0.0.1"
 SOCKET_SERVER_PORT = 3507
 SOCKET_SERVER_NAMESPACE = "/sensor_socket_server"
+
+SERVER_ADDRESS = "localhost:9092"
+TOPIC          = "gate_data"
+
+SENSOR_START_DATE = datetime.fromisoformat("2023-01-09T15:00:00+02:00")
 
 # What can a client do?
 #  send messages, as in, the literal message it's adding to kafka   ("send_message")
