@@ -134,7 +134,9 @@ class TallinnDashboard(param.Parameterized):
             "temp":[]
         })
         # STEP 3: Train the forecasting model
-        new_plot = self.forecaster.forecast()
+        # new_plot = self.forecaster.forecast()  ← blocks event loop → socket keepalives fail → producer disconnects
+        loop = asyncio.get_event_loop()
+        new_plot = await loop.run_in_executor(None, self.forecaster.forecast)
         # STEP 4: Update the Forecast plot(s)
         self.update_forecast_plot(new_plot)
         # STEP 5: Tell sensors to resume
@@ -277,9 +279,16 @@ class TallinnDashboard(param.Parameterized):
         
 dashboard = TallinnDashboard(socket_server)
 print("2. Created Dashboard object")
+
+# _main_loop = None  # Set in main() so Tornado thread can schedule coroutines on the right loop
+
 # Every 2 seconds, 10 mins pass, hence 6 times that is an hour. 4 times that is 4 hours.
 # Total: 48 seconds.
-pn.state.add_periodic_callback(dashboard.update_forecast, period=2*6*4*1000)
+# pn.state.add_periodic_callback(dashboard.update_forecast, period=2*6*4*1000)  ← async fn deadlocks on Panel's Tornado thread
+# def _trigger_forecast():                                                        ← run_coroutine_threadsafe also unreliable across Panel/asyncio thread boundary
+#     if _main_loop and _main_loop.is_running():
+#         asyncio.run_coroutine_threadsafe(dashboard.update_forecast(), _main_loop)
+# pn.state.add_periodic_callback(_trigger_forecast, period=2*6*4*1000)
 print("3. Added dashboard update callback")
 
 template = pn.template.MaterialTemplate(
@@ -310,17 +319,27 @@ print("4. Created Consumer")
 def start_panel():
     pn.serve(template, port=5006)
 
+async def periodic_forecast():
+    # Runs on the main asyncio loop — same loop as the socket server, so pause/resume emit correctly
+    forecast_interval_seconds = 2 * 6 * 4  # 48s wall-clock = 4h simulated (24 iterations × 10min each)
+    while True:
+        await asyncio.sleep(forecast_interval_seconds)
+        print("PERIODIC: Triggering forecast...")
+        await dashboard.update_forecast()
+
 async def main():
+    # global _main_loop               ← no longer needed; forecast runs on this loop directly
+    # _main_loop = asyncio.get_event_loop()
     panel_thread = threading.Thread(target=start_panel)
     panel_thread.daemon = True
     panel_thread.start()
     print("5. Started Panel Thread")
     await start_socket_server(sio)
     print("6. Started Socket Server")
-    await dashboard.update_forecast()
-    print("7. Updated forecast")
+    # await dashboard.update_forecast()
     await asyncio.gather(
-        #consumer.start(),
+        consumer.start(),
+        periodic_forecast(),
         asyncio.Event().wait()
     )
     

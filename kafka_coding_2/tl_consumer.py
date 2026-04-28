@@ -43,7 +43,8 @@ class TallinnGateSensorConsumer():
         self.consumer = kafka.KafkaConsumer(
             bootstrap_servers=[self.server_address],
             group_id = self.group_id,
-            auto_offset_reset = "earliest"
+            auto_offset_reset = "earliest",
+            api_version=(2, 5, 0)
         )
         self.consumer.subscribe(topics=[self.topic])
         ### INTERNAL VALUES OF THE SENSOR
@@ -74,23 +75,32 @@ class TallinnGateSensorConsumer():
 
     async def consume(self):
         try:
-            for sensor_reading in self.consumer:
-                bytes_reader = io.BytesIO(sensor_reading.value)
-                decoder = avro.io.BinaryDecoder(bytes_reader)
-                reader = avro.io.DatumReader(SCHEMA)
-                sensor_data = reader.read(decoder)
+            # for sensor_reading in self.consumer:  ← original blocking iterator, freezes event loop
+            # poll()-based loop also blocked event loop for timeout_ms duration
+            # run_in_executor moves the blocking poll() into a thread so the event loop
+            # stays free to process socket connections and aiohttp requests concurrently
+            loop = asyncio.get_event_loop()
+            while self.is_consuming:
+                records = await loop.run_in_executor(
+                    None,
+                    lambda: self.consumer.poll(timeout_ms=100, max_records=10)
+                )
+                for tp, messages in records.items():
+                    for sensor_reading in messages:
+                        bytes_reader = io.BytesIO(sensor_reading.value)
+                        decoder = avro.io.BinaryDecoder(bytes_reader)
+                        reader = avro.io.DatumReader(SCHEMA)
+                        sensor_data = reader.read(decoder)
 
-                self.dashboard.accumulate_entry(sensor_data)
-                self.dashboard.update_latest_reading(sensor_data)
+                        self.dashboard.accumulate_entry(sensor_data)
+                        self.dashboard.update_latest_reading(sensor_data)
 
                 # How to stop consumer from Mohit (2017) https://stackoverflow.com/a/45430054
                 if self.is_consuming == False:
                     break
                 if time.time() >= self.when_to_stop_seconds:
-                    self.stop() #Stop consuming
+                    await self.stop()
                     break
-                #else:
-                #    print(f"{time.time()} | Stop at: {self.when_to_stop_seconds}")
         except asyncio.CancelledError:
             self.consumer.close()
             print("Stopped because tasked was cancelled. Was it on purpose?")

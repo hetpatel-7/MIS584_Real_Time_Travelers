@@ -14,7 +14,7 @@ from typing import Union, Literal
 import socketio
 from tl_sio_client import PublisherSIOClient
 
-type SensorStates = Union[Literal["Off"], Literal["Paused"], Literal["Emitting"]]
+SensorStates = Union[Literal["Off"], Literal["Paused"], Literal["Emitting"]]
 
 class TallinnGateSensorPublisher():
     """ A sensor that will publish data every X units of time.
@@ -39,7 +39,8 @@ class TallinnGateSensorPublisher():
         self.server_address = server_address
         self.topic = topic
         self.producer = kafka.KafkaProducer(
-            bootstrap_servers=[self.server_address]
+            bootstrap_servers=[self.server_address],
+            api_version=(2, 5, 0)
         )
         ### DB SENSOR NAME TO SEARCH AND DATETIME TO START ON
         self.sensor_name = sensor_name
@@ -65,7 +66,7 @@ class TallinnGateSensorPublisher():
     
     async def start(self):
         print(f"Starting '{self.alias}' (PROD)")
-        self.db_connection = sqlite3.connect("./data.db")
+        self.db_connection = sqlite3.connect("./data/data.db")
         # From tijko (2024) https://stackoverflow.com/a/57806886
         with self.db_connection:
             self.db_connection.row_factory = sqlite3.Row
@@ -174,10 +175,12 @@ class TallinnGateSensorPublisher():
     async def publish(self):
         while self.state != "Off":
             if self.state == "Paused":
-                await self.send_current_state()
+                if self.enable_socket:  # guard: socket may be disconnected during training
+                    await self.send_current_state()
                 await asyncio.sleep(self.waiting_time)
             else:
-                await self.send_current_state()
+                if self.enable_socket:  # guard: socket may be disconnected during training
+                    await self.send_current_state()
                 sensor_entries = self.get_sensor_entries()
                 print(f"{self.sensor_name} | {len(sensor_entries)} entries to publish")
                 for entry in sensor_entries:

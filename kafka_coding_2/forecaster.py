@@ -49,6 +49,7 @@ mpl.rcParams['axes.prop_cycle'] = cycler(color=["#000000", "#000000"])
 from fpppy.utils import plot_series
 import matplotlib.dates as mdates
 
+
 mpl.colormaps.register(
     mpl.colors.ListedColormap(
         ["#000000", "#2f2fff"], name="black_and_blue"),
@@ -134,7 +135,10 @@ class Forecaster():
                 'year', 'month', 'day', 'hour', 'in_sum', 'out_sum', #'day_of_week',
             ]
         )
-        self.window_size = len(self.ptc_weather_2022) // 2
+        # self.window_size = len(self.ptc_weather_2022) // 2  ← wrong: used full 2022 data and halved it
+        # Notebook approach: filter to last 5 months only, use full 5 months as window (~3694 rows)
+        self.ptc_weather_2022 = self.ptc_weather_2022[self.ptc_weather_2022["ds"] > "2022-07-31"]
+        self.window_size = len(self.ptc_weather_2022)
         self.hour_window = 8
 
     def prepare_2023_data(self, ptc_weather):

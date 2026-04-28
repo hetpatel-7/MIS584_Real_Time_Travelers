@@ -15,6 +15,7 @@ SOCKET_SERVER_HOST = "0.0.0.0"
 SOCKET_SERVER_PORT = 3507
 SOCKET_SERVER_NAMESPACE = "/sensor_socket_server"
 
+# KAFKA_SERVER_ADDRESS = "127.0.0.1:5001"  ← old container, metadata IPv6 mismatch
 KAFKA_SERVER_ADDRESS = "127.0.0.1:9092"
 TOPIC = "gate_data"
 

@@ -5,6 +5,7 @@ from tl_utils.constants import SOCKET_SERVER_PORT, SOCKET_SERVER_NAMESPACE
 class TallinnSocketServer(socketio.AsyncNamespace):
     def __init__(self, namespace):
         super().__init__(namespace)
+        self.dashboard = None
 
     def on_connect(self, sid, environ):
         print(f"Connected: {sid}")
@@ -43,9 +44,11 @@ async def start_socket_server(sio : socketio.AsyncServer):
     sio.attach(app)
     runner = web.AppRunner(app)
     await runner.setup()
+    # host="localhost" can resolve to IPv6 ::1 on Windows, causing connection refusal
+    # host="localhost", port=SOCKET_SERVER_PORT
     site = web.TCPSite(
         runner,
-        host="localhost", port=SOCKET_SERVER_PORT
+        host="0.0.0.0", port=SOCKET_SERVER_PORT
     )
     await site.start()
     print("Awaited Site.Start()")
